@@ -12,7 +12,7 @@
 - CUDA 13 portability; aligned-safe DP payload parsing.
 
 ### CPU / correctness
-- Fix GCC 14 `<cstdint>` portability.
+- Fix GCC 14 `<cstdint>` and Clang builtin/intrinsic portability.
 - Fix UBSan signed overflow in Montgomery setup and misaligned public-key
   serialization accesses.
 - Meaningful exit codes for `-check` and search.

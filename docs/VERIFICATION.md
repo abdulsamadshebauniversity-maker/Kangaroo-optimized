@@ -9,7 +9,8 @@
 ## Commands and results
 | Command / check | Result |
 |---|---|
-| `make -j2` | Pass |
+| `make -j2` (GCC 14) | Pass |
+| `make CXX=clang++` (Clang 19) and regression suite | Pass |
 | `python3 tests/run_tests.py --binary ./kangaroo` | ALL TESTS PASSED |
 | ASan+UBSan build and tests (`ASAN_OPTIONS=detect_leaks=0`, `UBSAN_OPTIONS=halt_on_error=1`) | ALL TESTS PASSED |
 | GPU-enabled sm_86 binary, CPU regression suite | ALL TESTS PASSED |

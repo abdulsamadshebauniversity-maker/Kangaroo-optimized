@@ -46,7 +46,7 @@ Findings in `GPU/GPUEngine.cu`, `GPU/GPUCompute.h`, `GPU/GPUMath.h`:
 ## 5. Verification matrix
 | Check | Status |
 |---|---|
-| CPU build (GCC 14) | Pass |
+| CPU build (GCC 14, Clang 19) | Pass |
 | CPU regression suite | Pass |
 | ASan + UBSan regression suite | Pass (leak detection disabled) |
 | GPU-enabled binary CPU regression | Pass |
