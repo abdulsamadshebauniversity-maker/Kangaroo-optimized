@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu:
+    name: CPU (${{ matrix.cxx }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential clang python3
+      - name: Build
+        run: make -j2 CXX=${{ matrix.cxx }}
+      - name: Regression tests
+        run: python3 tests/run_tests.py --binary ./kangaroo --cxx ${{ matrix.cxx }}
+
+  sanitizers:
+    name: ASan + UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential python3
+      - name: Build with sanitizers
+        run: |
+          make -j2 \
+            CXXFLAGS='-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer' \
+            LDFLAGS='-fsanitize=address,undefined'
+      - name: Regression tests under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: python3 tests/run_tests.py --binary ./kangaroo
+
+  cuda-compile:
+    name: CUDA compile (sm_${{ matrix.ccap }})
+    runs-on: ubuntu-24.04
+    container: nvidia/cuda:12.8.1-devel-ubuntu24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ccap: [75, 86, 89, 90]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host toolchain
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential python3 git
+      - name: Build GPU binary (no device required)
+        run: make -j2 gpu=1 ccap=${{ matrix.ccap }} CUDA=/usr/local/cuda
+      - name: CPU-side self-check of GPU-enabled binary
+        run: ./kangaroo -check
+      - name: CPU regression tests of GPU-enabled binary
+        run: python3 tests/run_tests.py --binary ./kangaroo --skip-checkpoint

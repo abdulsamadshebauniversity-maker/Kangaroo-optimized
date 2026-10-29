@@ -1,0 +1,7 @@
+# Optional: offline CUDA compilation on a machine without a GPU/driver.
+# This provides nvcc + headers + runtime libraries for compile/link checks only.
+# It cannot run kernels or measure performance.
+nvidia-cuda-nvcc==13.0.88
+nvidia-cuda-crt==13.0.88
+nvidia-nvvm==13.0.88
+nvidia-cuda-runtime==13.0.96

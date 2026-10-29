@@ -1,0 +1,133 @@
+{
+  "timestamp_utc": "2026-10-29T19:58:03Z",
+  "platform": "Linux-6.1.158+-x86_64-with-glibc2.41",
+  "python": "3.13.16",
+  "gpu_info": null,
+  "settings": {
+    "binary": null,
+    "baseline": "/home/user/verification/bin/kangaroo-baseline",
+    "candidate": "/home/user/verification/bin/kangaroo-candidate-cpu",
+    "gpu": false,
+    "gpu_id": 0,
+    "grid": null,
+    "threads": 2,
+    "dp": 8,
+    "gpu_batch": null,
+    "bits": 56,
+    "input": null,
+    "duration": 6.0,
+    "repeats": 2,
+    "json": "/home/user/verification/cpu-ab-benchmark-final.json"
+  },
+  "binaries": {
+    "baseline": {
+      "path": "/home/user/verification/bin/kangaroo-baseline",
+      "sha256": "185be0e7d9fac281a05750c79980dd22e201977f0d96a7679a6769e507ae0bc5"
+    },
+    "candidate": {
+      "path": "/home/user/verification/bin/kangaroo-candidate-cpu",
+      "sha256": "b4c67648f06bd78e09109771430a30ed23727abf3d67bfbfb49d18d6359c5d48"
+    }
+  },
+  "results": {
+    "baseline": {
+      "runs": [
+        {
+          "command": [
+            "/home/user/verification/bin/kangaroo-baseline",
+            "-t",
+            "2",
+            "-d",
+            "8",
+            "-m",
+            "1000000",
+            "/tmp/tmphzz6k01x/bench56.txt"
+          ],
+          "elapsed_s": 6.006,
+          "timed_out": true,
+          "returncode": -15,
+          "samples": 2,
+          "median_MKps": 13.985,
+          "min_MKps": 11.17,
+          "max_MKps": 16.8,
+          "lost_items_warning": 0,
+          "log_tail": "Kangaroo v2.2\nStart:80000000000000\nStop :FFFFFFFFFFFFFF\nKeys :1\nNumber of CPU thread: 2\nRange width: 2^55\nJump Avg distance: 2^27.02\nNumber of kangaroos: 2^11.00\nSuggested DP: 13\nExpected operations: 2^28.56\nExpected RAM: 70.8MB\nDP size: 8 [0xff00000000000000]\nSolveKeyCPU Thread 1: 1024 kangaroos\nSolveKeyCPU Thread 0: 1024 kangaroos\n\n[11.17 MK/s][GPU 0.00 MK/s][Count 2^24.43][Dead 0][02s (Avg 35s)][4.7/15.8MB]  \n[16.80 MK/s][GPU 0.00 MK/s][Count 2^25.43][Dead 0][04s (Avg 23s)][7.4/25.1MB]  "
+        },
+        {
+          "command": [
+            "/home/user/verification/bin/kangaroo-baseline",
+            "-t",
+            "2",
+            "-d",
+            "8",
+            "-m",
+            "1000000",
+            "/tmp/tmphzz6k01x/bench56.txt"
+          ],
+          "elapsed_s": 6.004,
+          "timed_out": true,
+          "returncode": -15,
+          "samples": 2,
+          "median_MKps": 14.21,
+          "min_MKps": 11.37,
+          "max_MKps": 17.05,
+          "lost_items_warning": 0,
+          "log_tail": "Kangaroo v2.2\nStart:80000000000000\nStop :FFFFFFFFFFFFFF\nKeys :1\nNumber of CPU thread: 2\nRange width: 2^55\nJump Avg distance: 2^27.02\nNumber of kangaroos: 2^11.00\nSuggested DP: 13\nExpected operations: 2^28.56\nExpected RAM: 70.8MB\nDP size: 8 [0xff00000000000000]\nSolveKeyCPU Thread 0: 1024 kangaroos\nSolveKeyCPU Thread 1: 1024 kangaroos\n\n[11.37 MK/s][GPU 0.00 MK/s][Count 2^24.45][Dead 0][02s (Avg 34s)][4.8/16.1MB]  \n[17.05 MK/s][GPU 0.00 MK/s][Count 2^25.45][Dead 0][04s (Avg 23s)][7.5/25.4MB]  "
+        }
+      ],
+      "median_of_run_medians_MKps": 14.0975,
+      "stdev_MKps": 0.1591,
+      "any_lost_items": false
+    },
+    "candidate": {
+      "runs": [
+        {
+          "command": [
+            "/home/user/verification/bin/kangaroo-candidate-cpu",
+            "-t",
+            "2",
+            "-d",
+            "8",
+            "-m",
+            "1000000",
+            "/tmp/tmphzz6k01x/bench56.txt"
+          ],
+          "elapsed_s": 6.007,
+          "timed_out": true,
+          "returncode": -15,
+          "samples": 2,
+          "median_MKps": 14.2,
+          "min_MKps": 11.38,
+          "max_MKps": 17.02,
+          "lost_items_warning": 0,
+          "log_tail": "Kangaroo v2.2-opt.1\nStart:80000000000000\nStop :FFFFFFFFFFFFFF\nKeys :1\nNumber of CPU thread: 2\nRange width: 2^55\nJump Avg distance: 2^27.02\nNumber of kangaroos: 2^11.00\nSuggested DP: 13\nExpected operations: 2^28.56\nExpected RAM: 70.8MB\nDP size: 8 [0xff00000000000000]\nSolveKeyCPU Thread 1: 1024 kangaroos\nSolveKeyCPU Thread 0: 1024 kangaroos\n\n[11.38 MK/s][GPU 0.00 MK/s][Count 2^24.45][Dead 0][02s (Avg 34s)][4.8/16.1MB]  \n[17.02 MK/s][GPU 0.00 MK/s][Count 2^25.45][Dead 0][04s (Avg 23s)][7.5/25.3MB]  "
+        },
+        {
+          "command": [
+            "/home/user/verification/bin/kangaroo-candidate-cpu",
+            "-t",
+            "2",
+            "-d",
+            "8",
+            "-m",
+            "1000000",
+            "/tmp/tmphzz6k01x/bench56.txt"
+          ],
+          "elapsed_s": 6.005,
+          "timed_out": true,
+          "returncode": -15,
+          "samples": 2,
+          "median_MKps": 13.91,
+          "min_MKps": 11.11,
+          "max_MKps": 16.71,
+          "lost_items_warning": 0,
+          "log_tail": "Kangaroo v2.2-opt.1\nStart:80000000000000\nStop :FFFFFFFFFFFFFF\nKeys :1\nNumber of CPU thread: 2\nRange width: 2^55\nJump Avg distance: 2^27.02\nNumber of kangaroos: 2^11.00\nSuggested DP: 13\nExpected operations: 2^28.56\nExpected RAM: 70.8MB\nDP size: 8 [0xff00000000000000]\nSolveKeyCPU Thread 1: 1024 kangaroos\nSolveKeyCPU Thread 0: 1024 kangaroos\n\n[11.11 MK/s][GPU 0.00 MK/s][Count 2^24.42][Dead 0][02s (Avg 35s)][4.7/15.8MB]  \n[16.71 MK/s][GPU 0.00 MK/s][Count 2^25.43][Dead 0][04s (Avg 23s)][7.4/25.0MB]  "
+        }
+      ],
+      "median_of_run_medians_MKps": 14.055,
+      "stdev_MKps": 0.2051,
+      "any_lost_items": false
+    }
+  },
+  "candidate_speedup": 0.997
+}

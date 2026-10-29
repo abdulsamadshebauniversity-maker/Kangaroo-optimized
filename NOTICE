@@ -1,0 +1,12 @@
+Kangaroo Optimized
+==================
+This repository is an independent modified fork of Kangaroo by Jean-Luc PONS:
+https://github.com/JeanLucPons/Kangaroo
+
+Upstream baseline commit: 37576c82d198c20fca65b14da74138ae6153a446
+
+Original code is copyright Jean-Luc PONS and contributors and is licensed under
+the GNU General Public License version 3 (GPL-3.0-only). Modified files retain
+their original copyright notices; new files are marked SPDX GPL-3.0-only.
+
+This fork is not affiliated with or endorsed by the upstream author.

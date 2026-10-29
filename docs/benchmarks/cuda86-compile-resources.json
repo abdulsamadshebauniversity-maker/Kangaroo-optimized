@@ -1,0 +1,46 @@
+{
+  "compiler": "nvcc 13.0.88, ptxas -O2 -maxrregcount=0, sm_86",
+  "note": "Compile-time resource counts only; not a runtime performance measurement.",
+  "variants": [
+    {
+      "name": "upstream baseline (CUDA 13 computeMode guard only)",
+      "registers": 98,
+      "barriers": 1,
+      "stack_frame_bytes": 18560,
+      "spill_stores": 0,
+      "spill_loads": 0
+    },
+    {
+      "name": "candidate default GPU_GRP_SIZE=128 GPU_BARRIERS=0",
+      "registers": 96,
+      "barriers": 0,
+      "stack_frame_bytes": 18560,
+      "spill_stores": 0,
+      "spill_loads": 0
+    },
+    {
+      "name": "candidate GPU_BARRIERS=1",
+      "registers": 96,
+      "barriers": 1,
+      "stack_frame_bytes": 18560,
+      "spill_stores": 0,
+      "spill_loads": 0
+    },
+    {
+      "name": "candidate GPU_GRP_SIZE=64 GPU_BARRIERS=0",
+      "registers": 96,
+      "barriers": 0,
+      "stack_frame_bytes": 9344,
+      "spill_stores": 0,
+      "spill_loads": 0
+    },
+    {
+      "name": "candidate GPU_GRP_SIZE=32 GPU_BARRIERS=0",
+      "registers": 255,
+      "barriers": 0,
+      "stack_frame_bytes": 9472,
+      "spill_stores": 7244,
+      "spill_loads": 6588
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+name: GPU validation (self-hosted)
+
+# Manual only: never run untrusted pull-request code on a self-hosted GPU runner.
+on:
+  workflow_dispatch:
+    inputs:
+      gpu_id:
+        description: CUDA device id
+        required: true
+        default: "0"
+      grid:
+        description: Kernel grid, e.g. 56,256 (leave empty for auto)
+        required: false
+        default: ""
+      dp:
+        description: Distinguished-point bits
+        required: true
+        default: "16"
+      duration:
+        description: Seconds per benchmark run
+        required: true
+        default: "30"
+      repeats:
+        description: Benchmark repeats
+        required: true
+        default: "5"
+      ccap:
+        description: CUDA compute capability, e.g. 86
+        required: true
+        default: "86"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, linux, x64, cuda]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show GPU
+        run: nvidia-smi
+      - name: Build
+        run: make -j2 gpu=1 ccap=${{ inputs.ccap }} CUDA=/usr/local/cuda
+      - name: List devices
+        run: ./kangaroo -l
+      - name: CPU/GPU parity check
+        run: ./kangaroo -gpu -gpuId ${{ inputs.gpu_id }} -check
+      - name: CPU regression tests
+        run: python3 tests/run_tests.py --binary ./kangaroo
+      - name: Throughput benchmark
+        run: |
+          GRID_ARGS=""
+          if [ -n "${{ inputs.grid }}" ]; then GRID_ARGS="--grid ${{ inputs.grid }}"; fi
+          python3 scripts/benchmark.py --binary ./kangaroo \
+            --gpu --gpu-id ${{ inputs.gpu_id }} --threads 0 \
+            --dp ${{ inputs.dp }} --duration ${{ inputs.duration }} \
+            --repeats ${{ inputs.repeats }} $GRID_ARGS \
+            --json gpu-validation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-validation
+          path: gpu-validation.json
