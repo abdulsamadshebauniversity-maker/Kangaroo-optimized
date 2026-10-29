@@ -33,12 +33,13 @@ using namespace std;
 void printUsage() {
 
   printf("Kangaroo [-v] [-t nbThread] [-d dpBit] [gpu] [-check]\n");
-  printf("         [-gpuId gpuId1[,gpuId2,...]] [-g g1x,g1y[,g2x,g2y,...]]\n");
+  printf("         [-gpuId gpuId1[,gpuId2,...]] [-g g1x,g1y[,g2x,g2y,...]] [-gpuBatch maxSteps]\n");
   printf("         inFile\n");
   printf(" -v: Print version\n");
   printf(" -gpu: Enable gpu calculation\n");
   printf(" -gpuId gpuId1,gpuId2,...: List of GPU(s) to use, default is 0\n");
   printf(" -g g1x,g1y,g2x,g2y,...: Specify GPU(s) kernel gridsize, default is 2*(MP),2*(Core/MP)\n");
+  printf(" -gpuBatch maxSteps: Maximum GPU steps per launch, 1..4096 (default %d); auto-reduced to protect DP buffer\n", NB_RUN);
   printf(" -d: Specify number of leading zeros for the DP method (default is auto)\n");
   printf(" -t nbThread: Secify number of thread\n");
   printf(" -w workfile: Specify file to save work into (current processed key only)\n");
@@ -144,6 +145,7 @@ static bool checkFlag = false;
 static bool gpuEnable = false;
 static vector<int> gpuId = { 0 };
 static vector<int> gridSize;
+static int gpuBatch = NB_RUN;
 static string workFile = "";
 static string checkWorkFile = "";
 static string iWorkFile = "";
@@ -293,6 +295,10 @@ int main(int argc, char* argv[]) {
       CHECKARG("-g",1);
       getInts("gridSize",gridSize,string(argv[a]),',');
       a++;
+    } else if(strcmp(argv[a],"-gpuBatch") == 0) {
+      CHECKARG("-gpuBatch",1);
+      gpuBatch = getInt("gpuBatch",argv[a]);
+      a++;
     } else if(strcmp(argv[a],"-v") == 0) {
       ::exit(0);
     } else if(strcmp(argv[a],"-check") == 0) {
@@ -308,6 +314,11 @@ int main(int argc, char* argv[]) {
 
   }
 
+  if(gpuBatch < 1 || gpuBatch > 4096) {
+    ::fprintf(stderr, "Invalid -gpuBatch %d: expected 1..4096\n", gpuBatch);
+    return 2;
+  }
+
   if(gridSize.size() == 0) {
     for(int i = 0; i < gpuId.size(); i++) {
       gridSize.push_back(0);
@@ -320,9 +331,9 @@ int main(int argc, char* argv[]) {
 
   Kangaroo *v = new Kangaroo(secp,dp,gpuEnable,workFile,iWorkFile,savePeriod,saveKangaroo,saveKangarooByServer,
                              maxStep,wtimeout,port,ntimeout,serverIP,outputFile,splitWorkFile);
+  v->SetGpuMaxSteps(static_cast<uint32_t>(gpuBatch));
   if(checkFlag) {
-    v->Check(gpuId,gridSize);  
-    exit(0);
+    return v->Check(gpuId,gridSize) ? 0 : 1;
   } else {
     if(checkWorkFile.length() > 0) {
       v->CheckWorkFile(nbCPUThread,checkWorkFile);
@@ -351,7 +362,7 @@ int main(int argc, char* argv[]) {
     if(serverMode)
       v->RunServer();
     else
-      v->Run(nbCPUThread,gpuId,gridSize);
+      return v->Run(nbCPUThread,gpuId,gridSize) ? 0 : 1;
   }
 
   return 0;

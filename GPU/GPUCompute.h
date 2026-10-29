@@ -19,7 +19,7 @@
 
 // -----------------------------------------------------------------------------------------
 
-__device__ void ComputeKangaroos(uint64_t *kangaroos,uint32_t maxFound,uint32_t *out,uint64_t dpMask) {
+__device__ void ComputeKangaroos(uint64_t *kangaroos,uint32_t maxFound,uint32_t *out,uint64_t dpMask,uint32_t nbRun) {
 
   uint64_t px[GPU_GRP_SIZE][4];
   uint64_t py[GPU_GRP_SIZE][4];
@@ -42,12 +42,12 @@ __device__ void ComputeKangaroos(uint64_t *kangaroos,uint32_t maxFound,uint32_t 
   LoadKangaroos(kangaroos,px,py,dist);
 #endif
 
-  for(int run = 0; run < NB_RUN; run++) {
+  for(uint32_t run = 0; run < nbRun; run++) {
 
     // P1 = jumpPoint
     // P2 = kangaroo
 
-    __syncthreads();
+    GPU_SYNC();
 
     for(int g = 0; g < GPU_GRP_SIZE; g++) {
       jmp = (uint32_t)px[g][0] & (NB_JUMP-1);
@@ -62,7 +62,7 @@ __device__ void ComputeKangaroos(uint64_t *kangaroos,uint32_t maxFound,uint32_t 
 
     _ModInvGrouped(dx);
 
-    __syncthreads();
+    GPU_SYNC();
 
     for(int g = 0; g < GPU_GRP_SIZE; g++) {
 

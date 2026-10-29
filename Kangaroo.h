@@ -69,6 +69,7 @@ typedef struct {
   int  gridSizeX;
   int  gridSizeY;
   int  gpuId;
+  uint32_t gpuMaxSteps;
 #endif
 
   Int *px; // Kangaroo position
@@ -131,11 +132,12 @@ public:
   Kangaroo(Secp256K1 *secp,int32_t initDPSize,bool useGpu,std::string &workFile,std::string &iWorkFile,
            uint32_t savePeriod,bool saveKangaroo,bool saveKangarooByServer,double maxStep,int wtimeout,int sport,int ntimeout,
            std::string serverIp,std::string outputFile,bool splitWorkfile);
-  void Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize);
+  bool Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize);
+  void SetGpuMaxSteps(uint32_t steps) { gpuMaxSteps = steps; }
   void RunServer();
   bool ParseConfigFile(std::string &fileName);
   bool LoadWork(std::string &fileName);
-  void Check(std::vector<int> gpuId,std::vector<int> gridSize);
+  bool Check(std::vector<int> gpuId,std::vector<int> gridSize);
   void MergeDir(std::string& dirname,std::string& dest);
   bool MergeWork(std::string &file1,std::string &file2,std::string &dest,bool printStat=true);
   void WorkInfo(std::string &fileName);
@@ -252,6 +254,8 @@ private:
   Point keyToSearchNeg;
   uint32_t keyIdx;
   bool endOfSearch;
+  bool gpuFailure;
+  uint32_t gpuMaxSteps;
   bool useGpu;
   double expectedNbOp;
   double expectedMem;

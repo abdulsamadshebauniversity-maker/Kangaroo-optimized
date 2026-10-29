@@ -19,6 +19,19 @@
 // 256(+64) bits integer CUDA libray for SECPK1
 // ---------------------------------------------------------------------------------
 
+// The kangaroo kernel keeps all walker state in per-thread registers/local
+// memory and never uses __shared__ memory. Block-wide barriers therefore only
+// add straggler synchronization. Keep a compile-time escape hatch for A/B
+// testing on a new architecture.
+#ifndef KANGAROO_USE_BARRIERS
+#define KANGAROO_USE_BARRIERS 0
+#endif
+#if KANGAROO_USE_BARRIERS
+#define GPU_SYNC() __syncthreads()
+#else
+#define GPU_SYNC() ((void)0)
+#endif
+
 // We need 1 extra block for ModInv
 #define NBBLOCK 5
 #define BIFULLSIZE 40
@@ -195,7 +208,7 @@ __device__ void LoadKangaroos(uint64_t *a,uint64_t px[GPU_GRP_SIZE][4],uint64_t 
 __device__ void LoadKangaroos(uint64_t * a,uint64_t px[GPU_GRP_SIZE][4],uint64_t py[GPU_GRP_SIZE][4],uint64_t dist[GPU_GRP_SIZE][2]) {
 #endif
 
-  __syncthreads();
+  GPU_SYNC();
 
   for(int g = 0; g<GPU_GRP_SIZE; g++) {
     
@@ -226,7 +239,7 @@ __device__ void LoadKangaroos(uint64_t * a,uint64_t px[GPU_GRP_SIZE][4],uint64_t
 
 __device__ void LoadDists(uint64_t* a,uint64_t dist[GPU_GRP_SIZE][2]) {
 
-  __syncthreads();
+  GPU_SYNC();
 
   for(int g = 0; g < GPU_GRP_SIZE; g++) {
 
@@ -276,7 +289,7 @@ __device__ void StoreKangaroos(uint64_t *a,uint64_t px[GPU_GRP_SIZE][4],uint64_t
 __device__ void StoreKangaroos(uint64_t * a,uint64_t px[GPU_GRP_SIZE][4],uint64_t py[GPU_GRP_SIZE][4],uint64_t dist[GPU_GRP_SIZE][2]) {
 #endif
 
-  __syncthreads();
+  GPU_SYNC();
 
   for(int g = 0; g < GPU_GRP_SIZE; g++) {
     uint64_t *x64 = (uint64_t *)px[g];
@@ -323,7 +336,7 @@ __device__ void StoreKangaroo(uint64_t* a,uint32_t stride,uint64_t px[4],uint64_
 
 __device__ void StoreDists(uint64_t* a,uint64_t dist[GPU_GRP_SIZE][2]) {
 
-  __syncthreads();
+  GPU_SYNC();
 
   for(int g = 0; g < GPU_GRP_SIZE; g++) {
     uint64_t* d64 = (uint64_t*)dist[g];

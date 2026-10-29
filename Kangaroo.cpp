@@ -57,6 +57,8 @@ Kangaroo::Kangaroo(Secp256K1 *secp,int32_t initDPSize,bool useGpu,string &workFi
   this->outputFile = outputFile;
   this->hostInfo = NULL;
   this->endOfSearch = false;
+  this->gpuFailure = false;
+  this->gpuMaxSteps = NB_RUN;
   this->saveRequest = false;
   this->connectedClient = 0;
   this->totalRW = 0;
@@ -520,10 +522,22 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
   vector<ITEM> gpuFound;
   GPUEngine *gpu;
 
-  gpu = new GPUEngine(ph->gridSizeX,ph->gridSizeY,ph->gpuId,65536 * 2);
+  gpu = new GPUEngine(ph->gridSizeX,ph->gridSizeY,ph->gpuId,65536 * 2,ph->gpuMaxSteps);
+  if(!gpu->IsInitialised()) {
+    ::fprintf(stderr, "GPU initialisation failed; aborting search.\n");
+    delete gpu;
+    gpuFailure = true;
+    endOfSearch = true;
+    ph->hasStarted = true;
+    ph->isRunning = false;
+    return;
+  }
 
-  if(keyIdx == 0)
+  if(keyIdx == 0) {
     ::printf("GPU: %s (%.1f MB used)\n",gpu->deviceName.c_str(),gpu->GetMemory() / 1048576.0);
+    ::printf("GPU batch: %u steps (requested max %u), DP output capacity %u items\n",
+             gpu->GetStepsPerLaunch(), ph->gpuMaxSteps, 65536u * 2u);
+  }
 
   double t0 = Timer::get_tick();
 
@@ -550,8 +564,16 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
 #else
   gpu->SetWildOffset(&rangeWidthDiv2);
 #endif
-  gpu->SetParams(dMask,jumpDistance,jumpPointx,jumpPointy);
-  gpu->SetKangaroos(ph->px,ph->py,ph->distance);
+  if(!gpu->SetParams(dMask,jumpDistance,jumpPointx,jumpPointy) ||
+     !gpu->SetKangaroos(ph->px,ph->py,ph->distance)) {
+    ::fprintf(stderr, "GPU parameter/state upload failed; aborting search.\n");
+    delete gpu;
+    gpuFailure = true;
+    endOfSearch = true;
+    ph->hasStarted = true;
+    ph->isRunning = false;
+    return;
+  }
 
   if(workFile.length()==0 || !saveKangaroo) {
     // No need to get back kangaroo, free memory
@@ -560,7 +582,15 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
     safe_delete_array(ph->distance);
   }
 
-  gpu->callKernel();
+  if(!gpu->callKernel()) {
+    ::fprintf(stderr, "GPU kernel launch failed; aborting search.\n");
+    delete gpu;
+    gpuFailure = true;
+    endOfSearch = true;
+    ph->hasStarted = true;
+    ph->isRunning = false;
+    return;
+  }
 
   double t1 = Timer::get_tick();
 
@@ -571,8 +601,13 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
 
   while(!endOfSearch) {
 
-    gpu->Launch(gpuFound);
-    counters[thId] += ph->nbKangaroo * NB_RUN;
+    if(!gpu->Launch(gpuFound)) {
+      ::fprintf(stderr, "GPU launch/transfer failed; aborting search.\n");
+      gpuFailure = true;
+      endOfSearch = true;
+      break;
+    }
+    counters[thId] += ph->nbKangaroo * gpu->GetStepsPerLaunch();
 
     if( clientMode ) {
 
@@ -604,7 +639,11 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
             Int py;
             Int d;
             CreateHerd(1,&px,&py,&d,kType,false);
-            gpu->SetKangaroo(gpuFound[g].kIdx,&px,&py,&d);
+            if(!gpu->SetKangaroo(gpuFound[g].kIdx,&px,&py,&d)) {
+              ::fprintf(stderr, "GPU kangaroo reset failed; aborting search.\n");
+              gpuFailure = true;
+              endOfSearch = true;
+            }
             collisionInSameHerd++;
           }
 
@@ -617,8 +656,14 @@ void Kangaroo::SolveKeyGPU(TH_PARAM *ph) {
     // Save request
     if(saveRequest && !endOfSearch) {
       // Get kangaroos
-      if(saveKangaroo)
-        gpu->GetKangaroos(ph->px,ph->py,ph->distance);
+      if(saveKangaroo) {
+        if(!gpu->GetKangaroos(ph->px,ph->py,ph->distance)) {
+          ::fprintf(stderr, "GPU checkpoint readback failed; aborting search.\n");
+          gpuFailure = true;
+          endOfSearch = true;
+          break;
+        }
+      }
       ph->isWaiting = true;
       LOCK(saveMutex);
       ph->isWaiting = false;
@@ -910,7 +955,7 @@ void Kangaroo::InitSearchKey() {
 
 // ----------------------------------------------------------------------------
 
-void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize) {
+bool Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize) {
 
   double t0 = Timer::get_tick();
 
@@ -929,12 +974,17 @@ void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize
 
   uint64_t totalThread = (uint64_t)nbCPUThread + (uint64_t)nbGPUThread;
   if(totalThread == 0) {
-    ::printf("No CPU or GPU thread, exiting.\n");
-    ::exit(0);
+    ::fprintf(stderr, "No CPU or GPU thread, exiting.\n");
+    return false;
   }
 
   TH_PARAM *params = (TH_PARAM *)malloc(totalThread * sizeof(TH_PARAM));
   THREAD_HANDLE *thHandles = (THREAD_HANDLE *)malloc(totalThread * sizeof(THREAD_HANDLE));
+  if(params == NULL || thHandles == NULL) {
+    ::fprintf(stderr, "Cannot allocate thread parameters.\n");
+    free(params); free(thHandles);
+    return false;
+  }
 
   memset(params, 0,totalThread * sizeof(TH_PARAM));
   memset(counters, 0, sizeof(counters));
@@ -947,11 +997,13 @@ void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize
     int x = gridSize[2ULL * i];
     int y = gridSize[2ULL * i + 1ULL];
     if(!GPUEngine::GetGridSize(gpuId[i],&x,&y)) {
-      return;
+      free(params); free(thHandles);
+      return false;
     } else {
       params[nbCPUThread + i].gridSizeX = x;
       params[nbCPUThread + i].gridSizeY = y;
     }
+    params[nbCPUThread + i].gpuMaxSteps = gpuMaxSteps;
     params[nbCPUThread + i].nbKangaroo = (uint64_t)GPU_GRP_SIZE * x * y;
     totalRW += params[nbCPUThread + i].nbKangaroo;
   }
@@ -963,8 +1015,10 @@ void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize
   // Set starting parameters
   if( clientMode ) {
     // Retrieve config from server
-    if( !GetConfigFromServer() )
-      ::exit(0);
+    if( !GetConfigFromServer() ) {
+      free(params); free(thHandles);
+      return false;
+    }
     // Client save only kangaroos, force -ws
     if(workFile.length()>0)
       saveKangaroo = true;
@@ -1054,6 +1108,10 @@ void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize
       JoinThreads(thHandles,nbCPUThread + nbGPUThread);
       FreeHandles(thHandles,nbCPUThread + nbGPUThread);
       hashTable.Reset();
+      if(gpuFailure) {
+        free(params); free(thHandles);
+        return false;
+      }
 
 #ifdef STATS
 
@@ -1079,7 +1137,9 @@ void Kangaroo::Run(int nbThread,std::vector<int> gpuId,std::vector<int> gridSize
   double t1 = Timer::get_tick();
 
   ::printf("\nDone: Total time %s \n" , GetTimeStr(t1-t0+offsetTime).c_str());
-
+  free(params);
+  free(thHandles);
+  return true;
 }
 
 

@@ -19,7 +19,7 @@
 #define CONSTANTSH
 
 // Release number
-#define RELEASE "2.2"
+#define RELEASE "2.2-opt.1"
 
 // Use symmetry
 //#define USE_SYMMETRY
@@ -28,11 +28,16 @@
 // Max 512 for the GPU
 #define NB_JUMP 32
 
-// GPU group size
+// GPU group size (overridable at compile time for A/B benchmarking)
+#ifndef GPU_GRP_SIZE
 #define GPU_GRP_SIZE 128
+#endif
 
-// GPU number of run per kernel call
+// Default maximum GPU steps per kernel call (overridable at compile time;
+// the runtime may choose a smaller batch to protect the DP output buffer).
+#ifndef NB_RUN
 #define NB_RUN 64
+#endif
 
 // Kangaroo type
 #define TAME 0  // Tame kangaroo

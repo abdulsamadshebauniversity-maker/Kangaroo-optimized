@@ -411,7 +411,7 @@ void Kangaroo::CheckWorkFile(int nbCore,std::string& fileName) {
 }
 
 
-void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
+bool Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
 
   Int::Check();
 
@@ -454,6 +454,7 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
     ::printf("ComputePublicKeys wrong at %d\n",i);
     ::printf("%s\n",pts1[i].toString().c_str());
     ::printf("%s\n",pts2[i].toString().c_str());
+    return false;
   }
 
   /*
@@ -486,10 +487,11 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
     int x = gridSize[0];
     int y = gridSize[1];
     if(!GPUEngine::GetGridSize(gpuId[0],&x,&y)) {
-      return;
+      return false;
     }
 
-    GPUEngine h(x,y,gpuId[0],65536);
+    GPUEngine h(x,y,gpuId[0],65536,gpuMaxSteps);
+    if(!h.IsInitialised()) return false;
     ::printf(" done\n");
     ::printf("GPU: %s\n",h.deviceName.c_str());
     ::printf("GPU: %.1f MB\n",h.GetMemory() / 1048576.0);
@@ -514,24 +516,27 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
 
     CreateJumpTable();
 
-    h.SetParams(dMask,jumpDistance,jumpPointx,jumpPointy);
+    if(!h.SetParams(dMask,jumpDistance,jumpPointx,jumpPointy)) return false;
     h.SetWildOffset(&rangeWidthDiv2);
-    h.SetKangaroos(cpuPx,cpuPy,cpuD);
+    if(!h.SetKangaroos(cpuPx,cpuPy,cpuD)) return false;
 
     // Test single
     uint64_t r = rndl() % nb;
     CreateHerd(1,&cpuPx[r],&cpuPy[r],&cpuD[r],r % 2);
-    h.SetKangaroo(r,&cpuPx[r],&cpuPy[r],&cpuD[r]);
+    if(!h.SetKangaroo(r,&cpuPx[r],&cpuPy[r],&cpuD[r])) return false;
 
-    h.Launch(gpuFound);
-    h.GetKangaroos(gpuPx,gpuPy,gpuD);
-    h.Launch(gpuFound);
+    // Start the first batch explicitly; upstream called Launch() before any
+    // kernel had populated the output buffer.
+    if(!h.callKernel()) return false;
+    if(!h.GetKangaroos(gpuPx,gpuPy,gpuD)) return false;
+    if(!h.Launch(gpuFound)) return false;
     ::printf("DP found: %d\n",(int)gpuFound.size());
 
     // Do the same on CPU
     Int _1;
     _1.SetInt32(1);
-    for(int r = 0; r<NB_RUN; r++) {
+    const int nbRun = static_cast<int>(h.GetStepsPerLaunch());
+    for(int r = 0; r<nbRun; r++) {
       for(int i = 0; i<nb; i++) {
         uint64_t jmp = (cpuPx[i].bits64[0] % NB_JUMP);
 
@@ -577,7 +582,7 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
             ::printf("[%d] %s [0x%" PRIx64 "]\n",j,gpuFound[j].x.GetBase16().c_str(),gpuFound[j].kIdx);
 #endif
             ::printf("[%d] %s \n",i,cpuPx[gpuFound[i].kIdx].GetBase16().c_str());
-            return;
+            return false;
           }
 
         }
@@ -608,7 +613,11 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
 
     if(nbFault) {
       ::printf("CPU/GPU not ok: %d/%d faults\n",nbFault,nb);
-      return;
+      return false;
+    }
+    if(!gpuFound.empty()) {
+      ::printf("CPU/GPU not ok: %d unmatched GPU DPs\n",static_cast<int>(gpuFound.size()));
+      return false;
     }
 
     // Comapre DP
@@ -620,4 +629,6 @@ void Kangaroo::Check(std::vector<int> gpuId,std::vector<int> gridSize) {
 
 #endif
 
+
+  return true;
 }

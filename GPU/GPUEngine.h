@@ -19,6 +19,8 @@
 #define GPUENGINEH
 
 #include <vector>
+#include <cstddef>
+#include <cstdint>
 #include "../Constants.h"
 #include "../SECPK1/SECP256k1.h"
 
@@ -41,19 +43,22 @@ class GPUEngine {
 
 public:
 
-  GPUEngine(int nbThreadGroup,int nbThreadPerGroup,int gpuId,uint32_t maxFound);
+  GPUEngine(int nbThreadGroup,int nbThreadPerGroup,int gpuId,uint32_t maxFound,uint32_t maxSteps = NB_RUN);
   ~GPUEngine();
-  void SetParams(uint64_t dpMask,Int *distance,Int *px,Int *py);
-  void SetKangaroos(Int *px,Int *py,Int *d);
-  void GetKangaroos(Int *px,Int *py,Int *d);
-  void SetKangaroo(uint64_t kIdx,Int *px,Int *py,Int *d);
+  bool SetParams(uint64_t dpMask,Int *distance,Int *px,Int *py);
+  bool SetKangaroos(Int *px,Int *py,Int *d);
+  bool GetKangaroos(Int *px,Int *py,Int *d);
+  bool SetKangaroo(uint64_t kIdx,Int *px,Int *py,Int *d);
   bool Launch(std::vector<ITEM> &hashFound,bool spinWait = false);
   void SetWildOffset(Int *offset);
   int GetNbThread();
   int GetGroupSize();
-  int GetMemory();
+  size_t GetMemory();
   bool callKernelAndWait();
   bool callKernel();
+  bool IsInitialised() const { return initialised; }
+  uint32_t GetStepsPerLaunch() const { return stepsPerLaunch; }
+  uint64_t GetLostItems() const { return lostItemsTotal; }
 
   std::string deviceName;
 
@@ -67,18 +72,23 @@ private:
   Int wildOffset;
   int nbThread;
   int nbThreadPerGroup;
+  int gpuId;
   uint64_t *inputKangaroo;
   uint64_t *inputKangarooPinned;
   uint32_t *outputItem;
   uint32_t *outputItemPinned;
   uint64_t *jumpPinned;
+  void *completionEvent; // cudaEvent_t; opaque so CPU-only builds need no CUDA headers
   bool initialised;
   bool lostWarning;
   uint32_t maxFound;
-  uint32_t outputSize;
-  uint32_t kangarooSize;
-  uint32_t kangarooSizePinned;
-  uint32_t jumpSize;
+  uint32_t maxSteps;
+  uint32_t stepsPerLaunch;
+  uint64_t lostItemsTotal;
+  size_t outputSize;
+  size_t kangarooSize;
+  size_t kangarooSizePinned;
+  size_t jumpSize;
   uint64_t dpMask;
 
 };
