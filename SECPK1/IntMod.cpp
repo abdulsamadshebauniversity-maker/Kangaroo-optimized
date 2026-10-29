@@ -748,16 +748,18 @@ void Int::SetupField(Int *n, Int *R, Int *R2, Int *R3, Int *R4) {
   // Size in number of 32bit word
   int nSize = n->GetSize();
 
-  // Last digit inversions (Newton's iteration)
+  // Last digit inversions (Newton's iteration modulo 2^64).
+  // Use unsigned arithmetic: the wrap-around is intentional and signed
+  // overflow would be undefined behavior.
   {
-    int64_t x, t;
-    x = t = (int64_t)n->bits64[0];
-    x = x * (2 - t * x);
-    x = x * (2 - t * x);
-    x = x * (2 - t * x);
-    x = x * (2 - t * x);
-    x = x * (2 - t * x);
-    MM64 = (uint64_t)(-x);
+    uint64_t x, t;
+    x = t = n->bits64[0];
+    x = x * (2ULL - t * x);
+    x = x * (2ULL - t * x);
+    x = x * (2ULL - t * x);
+    x = x * (2ULL - t * x);
+    x = x * (2ULL - t * x);
+    MM64 = 0ULL - x;
     MM32 = (uint32_t)MM64;
   }
   _P.Set(n);

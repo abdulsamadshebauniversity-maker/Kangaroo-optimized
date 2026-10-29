@@ -486,21 +486,25 @@ unsigned char Int::GetByte(int n) {
 void Int::Set32Bytes(unsigned char *bytes) {
 
   CLEAR();
-  uint64_t *ptr = (uint64_t *)bytes;
-  bits64[3] = _byteswap_uint64(ptr[0]);
-  bits64[2] = _byteswap_uint64(ptr[1]);
-  bits64[1] = _byteswap_uint64(ptr[2]);
-  bits64[0] = _byteswap_uint64(ptr[3]);
+  // The caller may pass an unaligned buffer (e.g. a compressed public key
+  // with a one-byte prefix). Copy instead of casting to uint64_t*.
+  uint64_t tmp[4];
+  memcpy(tmp, bytes, sizeof(tmp));
+  bits64[3] = _byteswap_uint64(tmp[0]);
+  bits64[2] = _byteswap_uint64(tmp[1]);
+  bits64[1] = _byteswap_uint64(tmp[2]);
+  bits64[0] = _byteswap_uint64(tmp[3]);
 
 }
 
 void Int::Get32Bytes(unsigned char *buff) {
 
-  uint64_t *ptr = (uint64_t *)buff;
-  ptr[3] = _byteswap_uint64(bits64[0]);
-  ptr[2] = _byteswap_uint64(bits64[1]);
-  ptr[1] = _byteswap_uint64(bits64[2]);
-  ptr[0] = _byteswap_uint64(bits64[3]);
+  uint64_t tmp[4];
+  tmp[0] = _byteswap_uint64(bits64[3]);
+  tmp[1] = _byteswap_uint64(bits64[2]);
+  tmp[2] = _byteswap_uint64(bits64[1]);
+  tmp[3] = _byteswap_uint64(bits64[0]);
+  memcpy(buff, tmp, sizeof(tmp));
 
 }
 
